@@ -1,4 +1,4 @@
-# SnackMaker
+# 𝚂𝚗𝚊𝚌𝚔𝙼𝚊𝚔𝚎𝚛
 
 ୨୧ ˚₊‧ SnackMaker es una plataforma de comercio electrónico diseñada para la creación y compra de snacks saludables personalizados. El objetivo principal es permitir que los usuarios tengan el control total sobre los ingredientes de sus aperitivos, fomentando una alimentación consciente y adaptada a los gustos individuales ‧₊˚ ୨୧
 
