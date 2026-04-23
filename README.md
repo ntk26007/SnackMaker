@@ -26,14 +26,14 @@ La plataforma fomenta la interacción social mediante un sistema de ranking púb
 ### 4. Soporte mediante Chatbot
 El sistema integra un chatbot de asistencia técnica para resolver dudas frecuentes sobre el proceso de compra, ingredientes disponibles o gestión de la cuenta en tiempo real.
 
-##  ๋࣭ ⭑⚝ 𝘙𝘦𝘲𝘶𝘪𝘴𝘪𝘵𝘰𝘴 𝘥𝘦 𝘜𝘴𝘶𝘢𝘳𝘪𝘰 ⚝ ๋࣭ ⭑
+##  ⋆⭒˚.⋆ 𝘙𝘦𝘲𝘶𝘪𝘴𝘪𝘵𝘰𝘴 𝘥𝘦 𝘜𝘴𝘶𝘢𝘳𝘪𝘰 ⋆⭒˚.⋆
 Para garantizar la persistencia de los datos y la seguridad en las transacciones, el sistema requiere:
 * **Registro Obligatorio:** El usuario debe crear una cuenta e iniciar sesión para acceder al configurador de snacks, realizar compras y visualizar su inventario privado.
 
-## 𝘌𝘴𝘵𝘳𝘶𝘤𝘵𝘶𝘳𝘢 𝘥𝘦𝘭 𝘙𝘦𝘱𝘰𝘴𝘪𝘵𝘰𝘳𝘪𝘰
+## ⋆⭒˚.⋆ 𝘌𝘴𝘵𝘳𝘶𝘤𝘵𝘶𝘳𝘢 𝘥𝘦𝘭 𝘙𝘦𝘱𝘰𝘴𝘪𝘵𝘰𝘳𝘪𝘰 ⋆⭒˚.⋆
 * `/src`: Código fuente de la aplicación.
 * `/assets`: Recursos visuales y logotipos.
 * `/docs`: Documentación adicional sobre la API e ingredientes.
 
 ---
-Desarrollado como solución integral para la personalización de snacks saludables.
+☕︎ Desarrollado como solución integral para la personalización de snacks saludables.
