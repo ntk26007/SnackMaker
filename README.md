@@ -6,10 +6,10 @@
 
 ### 1. Personalización de Productos
 La funcionalidad principal permite a los usuarios crear su propio snack desde cero utilizando una variedad de ingredientes base proporcionados por la plataforma:
-* ✩**Frutos secos:** Almendras, nueces, cacahuetes, etc.
-* ✩**Frutas:** Deshidratadas o liofilizadas.
-* ✩**Complementos:** Semillas y distintos tipos de chocolate.
-* ✩**Identidad:** El usuario asigna un nombre propio a su creación, la cual se registra con una descripción generada y un precio calculado según los ingredientes elegidos.
+ ✩ **Frutos secos:** Almendras, nueces, cacahuetes, etc.
+ ✩ **Frutas:** Deshidratadas o liofilizadas.
+ ✩ **Complementos:** Semillas y distintos tipos de chocolate.
+ ✩ **Identidad:** El usuario asigna un nombre propio a su creación, la cual se registra con una descripción generada y un precio calculado según los ingredientes elegidos.
 
 ### 2. Gestión de Inventario
 Cada usuario dispone de un inventario personal donde se almacenan:
