@@ -1,22 +1,35 @@
-
-import { RouteObject } from 'react-router-dom';
 import HomePage from '../pages/home/page';
-import RankingPage from '../pages/ranking/page';
 import InventoryPage from '../pages/inventory/page';
+import RankingPage from '../pages/ranking/page';
+import AyudaPage from '../pages/ayuda/page';
+import ContactoPage from '../pages/contacto/page';
+import TerminosPage from '../pages/terminos/page';
 import NotFound from '../pages/NotFound';
 
-const routes: RouteObject[] = [
+const routes = [
   {
     path: '/',
     element: <HomePage />,
+  },
+  {
+    path: '/inventory',
+    element: <InventoryPage />,
   },
   {
     path: '/ranking',
     element: <RankingPage />,
   },
   {
-    path: '/inventory',
-    element: <InventoryPage />,
+    path: '/ayuda',
+    element: <AyudaPage />,
+  },
+  {
+    path: '/contacto',
+    element: <ContactoPage />,
+  },
+  {
+    path: '/terminos',
+    element: <TerminosPage />,
   },
   {
     path: '*',
