@@ -37,26 +37,49 @@ const getSnackImage = (snack: PopularSnack) => {
   return SNACK_IMAGE_POOL[idx];
 };
 
-// Deterministic pseudo-random generator based on snack id
-const seededRandom = (seed: number) => {
-  const x = Math.sin(seed * 9301 + 49297) * 233280;
-  return x - Math.floor(x);
+// Safe numeric ID extractor — handles undefined, strings, etc.
+const getNumericId = (snack: PopularSnack): number => {
+  if (typeof snack.id === 'number' && !isNaN(snack.id)) return snack.id;
+  if (typeof snack.id === 'string') {
+    const parsed = parseInt(snack.id, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  // Fallback: hash the name into a number
+  let hash = 0;
+  for (let i = 0; i < snack.name.length; i++) {
+    hash = ((hash << 5) - hash) + snack.name.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) || 1;
 };
 
-// Generate a realistic price between $3.99 and $15.99 based on snack id
+// Deterministic pseudo-random generator
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed * 9301 + 49297) * 233280;
+  const result = x - Math.floor(x);
+  return isNaN(result) ? 0.5 : result;
+};
+
+// Price: $3.99 to $15.99, deterministic per snack
 const getSnackPrice = (snack: PopularSnack) => {
-  if (snack.price && snack.price > 0) return snack.price;
-  const rand = seededRandom(snack.id);
-  const price = 3.99 + rand * 12; // $3.99 to $15.99
+  const rawPrice = Number(snack.price);
+  if (!isNaN(rawPrice) && rawPrice > 0) return rawPrice;
+  const id = getNumericId(snack);
+  const rand = seededRandom(id);
+  const price = 3.99 + rand * 12;
   return Math.round(price * 100) / 100;
 };
 
-// Generate realistic purchase count between 12 and 847 based on snack id
-const getSnackPurchases = (snack: PopularSnack) => {
-  if (snack.purchase_count && snack.purchase_count > 1) return snack.purchase_count;
-  const rand = seededRandom(snack.id + 1000); // different seed from price
-  const purchases = 12 + Math.floor(rand * 835); // 12 to 847
-  return purchases;
+// Purchases: deterministic base + ranking bonus so top ranks have higher counts
+const getSnackPurchases = (snack: PopularSnack, rankIndex: number = 0) => {
+  const rawCount = Number(snack.purchase_count);
+  if (!isNaN(rawCount) && rawCount > 1) return rawCount;
+  const id = getNumericId(snack);
+  const rand = seededRandom(id + 1000);
+  // Base 15-300, plus ranking bonus: higher rank = more purchases
+  const base = 15 + Math.floor(rand * 285);
+  const rankBonus = Math.max(0, 500 - rankIndex * 45); // #1 gets +500, #2 +455, etc.
+  return base + rankBonus;
 };
 
 export default function RankingPage() {
@@ -68,6 +91,12 @@ export default function RankingPage() {
   const [purchaseLoading, setPurchaseLoading] = useState<number | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState<PopularSnack | null>(null);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+  const [animateIn, setAnimateIn] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimateIn(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     loadPopularSnacks();
@@ -242,17 +271,45 @@ export default function RankingPage() {
           backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('https://readdy.ai/api/search-image?query=Colorful%20healthy%20snack%20ingredients%20nuts%20dried%20fruits%20seeds%20chocolate%20chips%20arranged%20beautifully%20on%20pastel%20background%2C%20food%20photography%2C%20vibrant%20colors%2C%20clean%20composition%2C%20natural%20lighting%2C%20appetizing%20display&width=1920&height=1080&seq=hero-bg&orientation=landscape')`
         }}
       >
+        <style>{`
+          @keyframes rankFadeDown {
+            from { opacity: 0; transform: translateY(-28px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes rankFadeUp {
+            from { opacity: 0; transform: translateY(36px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .rank-badge {
+            opacity: 0;
+            animation: rankFadeDown 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.08s;
+          }
+          .rank-title {
+            opacity: 0;
+            animation: rankFadeUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.22s;
+          }
+          .rank-subtitle {
+            opacity: 0;
+            animation: rankFadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.42s;
+          }
+        `}</style>
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent via-yellow-50/60 to-yellow-50"></div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center w-full">
-          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-5 py-2 mb-6">
+          <div className="rank-badge inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-5 py-2 mb-6">
             <i className="ri-trophy-fill text-yellow-400 text-sm"></i>
             <span className="text-white/90 text-sm font-medium tracking-wide uppercase">Comunidad SnackMaker</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-5" style={{ fontFamily: '"Pacifico", serif' }}>
+          <h1
+            className="rank-title text-5xl md:text-6xl font-bold text-white mb-5"
+            style={{ fontFamily: '"Pacifico", serif' }}
+          >
             Ranking de
             <span className="block text-yellow-400 mt-1">Snacks Populares</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto">
+          <p className="rank-subtitle text-lg md:text-xl text-gray-200 max-w-2xl mx-auto">
             Descubre los snacks más comprados por nuestra comunidad y únete a los favoritos
           </p>
         </div>
@@ -272,7 +329,10 @@ export default function RankingPage() {
               {/* ── TOP 3 PODIUM ── */}
               {popularSnacks.length >= 1 && (
                 <div className="mb-16">
-                  <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
+                  <h2
+                    className={`text-3xl font-bold text-center text-gray-800 mb-10 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+                    style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '480ms' }}
+                  >
                     <i className="ri-trophy-line text-yellow-500 mr-2"></i>
                     Mejores clasificados
                   </h2>
@@ -281,8 +341,13 @@ export default function RankingPage() {
                   <div className="flex justify-center items-end gap-4 max-w-3xl mx-auto">
                     {podiumOrder.map((snack, podiumIdx) => {
                       const meta = podiumMeta[podiumIdx];
+                      const podiumDelay = 600 + podiumIdx * 140;
                       return (
-                        <div key={snack.id} className="flex flex-col items-center flex-1 max-w-[220px]">
+                        <div
+                          key={snack.id}
+                          className={`flex flex-col items-center flex-1 max-w-[220px] transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                          style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${podiumDelay}ms` }}
+                        >
                           {/* Card */}
                           <div className={`w-full ${meta.bg} rounded-2xl ${meta.cardPad} flex flex-col items-center text-center transition-transform hover:scale-105`}>
                             {/* AI-generated snack image */}
@@ -299,7 +364,7 @@ export default function RankingPage() {
                             </h3>
                             <p className="text-white/80 text-xs mb-3 leading-snug line-clamp-2">{snack.description}</p>
                             <div className="bg-white/20 rounded-full px-3 py-1 mb-3">
-                              <span className="text-white font-semibold text-sm">{getSnackPurchases(snack)} compras</span>
+                              <span className="text-white font-semibold text-sm">{getSnackPurchases(snack, podiumIdx === 1 ? 0 : podiumIdx === 0 ? 1 : 2)} compras</span>
                             </div>
                             <button
                               onClick={() => handlePurchaseClick(snack)}
@@ -310,7 +375,12 @@ export default function RankingPage() {
                             </button>
                           </div>
                           {/* Emoji medal below card */}
-                          <div className={`${podiumIdx === 1 ? 'text-6xl' : 'text-5xl'} mt-2`}>{meta.emoji}</div>
+                          <div
+                            className={`${podiumIdx === 1 ? 'text-6xl' : 'text-5xl'} mt-2 transition-all duration-500 ${animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                            style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${900 + podiumIdx * 100}ms` }}
+                          >
+                            {meta.emoji}
+                          </div>
                         </div>
                       );
                     })}
@@ -319,7 +389,10 @@ export default function RankingPage() {
               )}
 
               {/* ── RANKING COMPLETO ── */}
-              <div className="bg-white rounded-3xl p-8">
+              <div
+                className={`bg-white rounded-3xl p-8 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '720ms' }}
+              >
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
                   <i className="ri-list-ordered text-pink-500 mr-2"></i>
                   Ranking Completo
@@ -328,7 +401,8 @@ export default function RankingPage() {
                   {popularSnacks.map((snack, index) => (
                     <div
                       key={snack.id}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-yellow-50/60 transition-all"
+                      className={`flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-yellow-50/60 transition-all duration-500 ${animateIn ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}`}
+                      style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${840 + index * 60}ms` }}
                     >
                       {/* Puesto */}
                       <div className={`w-11 h-11 flex-shrink-0 ${getRankBg(index)} rounded-full flex items-center justify-center`}>
@@ -367,7 +441,7 @@ export default function RankingPage() {
                       {/* Compras */}
                       <div className="text-center flex-shrink-0 w-16">
                         <p className="text-xs text-gray-400 mb-0.5">Compras</p>
-                        <p className="text-xl font-bold text-pink-600">{getSnackPurchases(snack)}</p>
+                        <p className="text-xl font-bold text-pink-600">{getSnackPurchases(snack, index)}</p>
                       </div>
 
                       {/* Botón comprar */}

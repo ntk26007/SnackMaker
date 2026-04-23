@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 interface PopularSnack {
   id: string;
@@ -81,6 +82,51 @@ const popularSnacks: PopularSnack[] = [
   }
 ];
 
+const scrollStyles = `
+  @keyframes revealUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes revealScale {
+    from { opacity: 0; transform: scale(0.90); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes revealFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes podiumRise {
+    from { opacity: 0; transform: translateY(60px) scaleY(0.7); }
+    to   { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  .ps-reveal-up {
+    opacity: 0;
+    animation: revealUp 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .ps-reveal-scale {
+    opacity: 0;
+    animation: revealScale 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .ps-reveal-fade {
+    opacity: 0;
+    animation: revealFade 0.6s ease forwards;
+  }
+  .ps-podium {
+    opacity: 0;
+    transform-origin: bottom center;
+    animation: podiumRise 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .ps-d0  { animation-delay: 0s; }
+  .ps-d1  { animation-delay: 0.08s; }
+  .ps-d2  { animation-delay: 0.16s; }
+  .ps-d3  { animation-delay: 0.24s; }
+  .ps-d4  { animation-delay: 0.32s; }
+  .ps-d5  { animation-delay: 0.40s; }
+  .ps-d6  { animation-delay: 0.48s; }
+  .ps-d7  { animation-delay: 0.56s; }
+  .ps-d8  { animation-delay: 0.64s; }
+`;
+
 export default function PopularSnacks() {
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'price'>('rating');
   const [selectedSnack, setSelectedSnack] = useState<PopularSnack | null>(null);
@@ -89,16 +135,17 @@ export default function PopularSnacks() {
   const [loading, setLoading] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
+  const { ref: headerRef, isVisible: headerVisible } = useScrollReveal({ threshold: 0.2 });
+  const { ref: filtersRef, isVisible: filtersVisible } = useScrollReveal({ threshold: 0.3 });
+  const { ref: cardsRef, isVisible: cardsVisible } = useScrollReveal({ threshold: 0.05 });
+  const { ref: podiumRef, isVisible: podiumVisible } = useScrollReveal({ threshold: 0.2 });
+
   const sortedSnacks = [...popularSnacks].sort((a, b) => {
     switch (sortBy) {
-      case 'rating':
-        return b.rating - a.rating;
-      case 'votes':
-        return b.votes - a.votes;
-      case 'price':
-        return a.price - b.price;
-      default:
-        return 0;
+      case 'rating': return b.rating - a.rating;
+      case 'votes':  return b.votes - a.votes;
+      case 'price':  return a.price - b.price;
+      default:       return 0;
     }
   });
 
@@ -117,10 +164,7 @@ export default function PopularSnacks() {
   };
 
   const processPurchase = async () => {
-    if (!userEmail.trim()) {
-      alert('¡Ingresa tu email para completar la compra!');
-      return;
-    }
+    if (!userEmail.trim()) { alert('¡Ingresa tu email para completar la compra!'); return; }
     if (!selectedSnack) return;
     setLoading(true);
     try {
@@ -162,64 +206,70 @@ export default function PopularSnacks() {
 
   return (
     <div className="min-h-screen">
-      {/* Header con degradado amarillo — separa visualmente la sección */}
+      <style>{scrollStyles}</style>
+
+      {/* Header con degradado amarillo */}
       <div className="bg-gradient-to-b from-yellow-100 via-yellow-50 to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-yellow-200/80 border border-yellow-300 rounded-full px-5 py-2 mb-6">
-            <i className="ri-trophy-fill text-yellow-500 text-sm"></i>
-            <span className="text-yellow-800 text-sm font-medium tracking-wide uppercase">Comunidad SnackMaker</span>
-          </div>
-          <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-5" style={{ fontFamily: '"Pacifico", serif' }}>
-            Ranking de
-            <span className="block text-yellow-500 mt-1">Snacks Populares</span>
-          </h2>
-          <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto">
-            Descubre las creaciones más valoradas por nuestra comunidad
-          </p>
+        <div ref={headerRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          {headerVisible && (
+            <>
+              <div className="ps-reveal-fade ps-d0 inline-flex items-center gap-2 bg-yellow-200/80 border border-yellow-300 rounded-full px-5 py-2 mb-6">
+                <i className="ri-trophy-fill text-yellow-500 text-sm"></i>
+                <span className="text-yellow-800 text-sm font-medium tracking-wide uppercase">Comunidad SnackMaker</span>
+              </div>
+              <h2 className="ps-reveal-up ps-d1 text-5xl md:text-6xl font-bold text-gray-800 mb-5" style={{ fontFamily: '"Pacifico", serif' }}>
+                Ranking de
+                <span className="block text-yellow-500 mt-1">Snacks Populares</span>
+              </h2>
+              <p className="ps-reveal-up ps-d2 text-lg md:text-xl text-gray-500 max-w-2xl mx-auto">
+                Descubre las creaciones más valoradas por nuestra comunidad
+              </p>
+            </>
+          )}
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
 
         {/* Sort Controls */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-full p-1 shadow-lg">
-            <button
-              onClick={() => setSortBy('rating')}
-              className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
-                sortBy === 'rating' ? 'bg-pink-500 text-white' : 'text-gray-600 hover:text-pink-600'
-              }`}
-            >
-              <i className="ri-star-line mr-2"></i>
-              Por Valoración
-            </button>
-            <button
-              onClick={() => setSortBy('votes')}
-              className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
-                sortBy === 'votes' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:text-yellow-600'
-              }`}
-            >
-              <i className="ri-heart-line mr-2"></i>
-              Por Votos
-            </button>
-            <button
-              onClick={() => setSortBy('price')}
-              className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
-                sortBy === 'price' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:text-yellow-600'
-              }`}
-            >
-              <i className="ri-money-dollar-circle-line mr-2"></i>
-              Por Precio
-            </button>
-          </div>
+        <div ref={filtersRef} className="flex justify-center mb-8">
+          {filtersVisible && (
+            <div className="ps-reveal-up ps-d0 bg-white rounded-full p-1 border border-gray-100">
+              <button
+                onClick={() => setSortBy('rating')}
+                className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                  sortBy === 'rating' ? 'bg-pink-500 text-white' : 'text-gray-600 hover:text-pink-600'
+                }`}
+              >
+                <i className="ri-star-line mr-2"></i>Por Valoración
+              </button>
+              <button
+                onClick={() => setSortBy('votes')}
+                className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                  sortBy === 'votes' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:text-yellow-600'
+                }`}
+              >
+                <i className="ri-heart-line mr-2"></i>Por Votos
+              </button>
+              <button
+                onClick={() => setSortBy('price')}
+                className={`px-6 py-2 rounded-full transition-all whitespace-nowrap cursor-pointer ${
+                  sortBy === 'price' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:text-yellow-600'
+                }`}
+              >
+                <i className="ri-money-dollar-circle-line mr-2"></i>Por Precio
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Snacks Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sortedSnacks.map((snack, index) => (
+        <div ref={cardsRef} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {cardsVisible && sortedSnacks.map((snack, index) => (
             <div
               key={snack.id}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:scale-105"
+              className={`ps-reveal-scale ps-d${Math.min(index, 5)} bg-white rounded-2xl overflow-hidden hover:scale-105 transition-all`}
+              style={{ border: '1px solid #f3f4f6' }}
             >
               <div className="relative">
                 <img
@@ -254,64 +304,66 @@ export default function PopularSnacks() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <span className="flex items-center">
-                      <i className="ri-heart-line mr-1"></i>
-                      {snack.votes}
-                    </span>
-                  </div>
+                  <span className="flex items-center text-sm text-gray-600">
+                    <i className="ri-heart-line mr-1"></i>{snack.votes}
+                  </span>
                   <div className="text-xl font-bold text-pink-600">${snack.price.toFixed(2)}</div>
                 </div>
                 <button
                   onClick={() => handlePurchaseSnack(snack)}
                   className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white py-2 rounded-lg font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <i className="ri-shopping-cart-line mr-2"></i>
-                  Comprar Snack
+                  <i className="ri-shopping-cart-line mr-2"></i>Comprar Snack
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Mejores clasificados (podio) */}
-        <div className="mt-16 pb-12">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Mejores clasificados</h2>
-          <div className="flex justify-center items-end space-x-4 max-w-4xl mx-auto">
-            {/* Second Place */}
-            <div className="text-center">
-              <div className="bg-gradient-to-t from-gray-300 to-gray-400 rounded-t-lg p-6 h-32 flex flex-col justify-end">
-                <div className="text-4xl mb-2">🥈</div>
-                <div className="text-white font-bold">{sortedSnacks[1]?.name}</div>
+        {/* Podio */}
+        <div ref={podiumRef} className="mt-16 pb-12">
+          {podiumVisible && (
+            <>
+              <h2 className="ps-reveal-up ps-d0 text-3xl font-bold text-center text-gray-800 mb-8">
+                Mejores clasificados
+              </h2>
+              <div className="flex justify-center items-end space-x-4 max-w-4xl mx-auto">
+                {/* 2º Lugar */}
+                <div className="ps-podium ps-d2 text-center">
+                  <div className="bg-gradient-to-t from-gray-300 to-gray-400 rounded-t-lg p-6 h-32 flex flex-col justify-end">
+                    <div className="text-4xl mb-2">🥈</div>
+                    <div className="text-white font-bold">{sortedSnacks[1]?.name}</div>
+                  </div>
+                  <div className="bg-gray-400 text-white py-2 px-4 rounded-b-lg">
+                    <div className="font-bold">2º Lugar</div>
+                    <div className="text-sm">⭐ {sortedSnacks[1]?.rating}</div>
+                  </div>
+                </div>
+                {/* 1º Lugar */}
+                <div className="ps-podium ps-d0 text-center">
+                  <div className="bg-gradient-to-t from-yellow-400 to-yellow-500 rounded-t-lg p-6 h-40 flex flex-col justify-end">
+                    <div className="text-5xl mb-2">🥇</div>
+                    <div className="text-white font-bold text-lg">{sortedSnacks[0]?.name}</div>
+                  </div>
+                  <div className="bg-yellow-500 text-white py-2 px-4 rounded-b-lg">
+                    <div className="font-bold">1º Lugar</div>
+                    <div className="text-sm">⭐ {sortedSnacks[0]?.rating}</div>
+                  </div>
+                </div>
+                {/* 3º Lugar */}
+                <div className="ps-podium ps-d4 text-center">
+                  <div className="bg-gradient-to-t from-orange-400 to-orange-500 rounded-t-lg p-6 h-24 flex flex-col justify-end">
+                    <div className="text-3xl mb-2">🥉</div>
+                    <div className="text-white font-bold">{sortedSnacks[2]?.name}</div>
+                  </div>
+                  <div className="bg-orange-500 text-white py-2 px-4 rounded-b-lg">
+                    <div className="font-bold">3º Lugar</div>
+                    <div className="text-sm">⭐ {sortedSnacks[2]?.rating}</div>
+                  </div>
+                </div>
               </div>
-              <div className="bg-gray-400 text-white py-2 px-4 rounded-b-lg">
-                <div className="font-bold">2º Lugar</div>
-                <div className="text-sm">⭐ {sortedSnacks[1]?.rating}</div>
-              </div>
-            </div>
-            {/* First Place */}
-            <div className="text-center">
-              <div className="bg-gradient-to-t from-yellow-400 to-yellow-500 rounded-t-lg p-6 h-40 flex flex-col justify-end">
-                <div className="text-5xl mb-2">🥇</div>
-                <div className="text-white font-bold text-lg">{sortedSnacks[0]?.name}</div>
-              </div>
-              <div className="bg-yellow-500 text-white py-2 px-4 rounded-b-lg">
-                <div className="font-bold">1º Lugar</div>
-                <div className="text-sm">⭐ {sortedSnacks[0]?.rating}</div>
-              </div>
-            </div>
-            {/* Third Place */}
-            <div className="text-center">
-              <div className="bg-gradient-to-t from-orange-400 to-orange-500 rounded-t-lg p-6 h-24 flex flex-col justify-end">
-                <div className="text-3xl mb-2">🥉</div>
-                <div className="text-white font-bold">{sortedSnacks[2]?.name}</div>
-              </div>
-              <div className="bg-orange-500 text-white py-2 px-4 rounded-b-lg">
-                <div className="font-bold">3º Lugar</div>
-                <div className="text-sm">⭐ {sortedSnacks[2]?.rating}</div>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
 

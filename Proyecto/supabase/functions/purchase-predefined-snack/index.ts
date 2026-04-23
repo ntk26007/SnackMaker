@@ -17,25 +17,28 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     )
 
-    const { snackId, userEmail } = await req.json()
+    const { snackName, snackCreator, userEmail, price, ingredients } = await req.json()
 
-    // Get snack details
-    const { data: snack, error: snackError } = await supabaseClient
-      .from('custom_snacks')
-      .select('*')
-      .eq('id', snackId)
-      .single()
+    if (!snackName || !userEmail) {
+      return new Response(
+        JSON.stringify({ error: 'Faltan datos requeridos: snackName y userEmail son obligatorios' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      )
+    }
 
-    if (snackError) throw snackError
-
-    // Create purchase record
+    // Create purchase record in predefined_snack_purchases
     const { error: purchaseError } = await supabaseClient
       .from('predefined_snack_purchases')
       .insert({
-        snack_id: snackId,
+        snack_name: snackName,
+        snack_creator: snackCreator || 'SnackMaker',
         user_email: userEmail,
-        total_price: snack.total_price,
-        purchased_at: new Date().toISOString()
+        price: price || 0,
+        ingredients: Array.isArray(ingredients) ? ingredients : [],
+        purchased_at: new Date().toISOString(),
       })
 
     if (purchaseError) throw purchaseError
@@ -45,11 +48,11 @@ serve(async (req) => {
       .from('user_inventory')
       .insert({
         user_email: userEmail,
-        snack_name: snack.name,
+        snack_name: snackName,
         snack_type: 'predefined',
-        total_price: snack.total_price,
-        ingredients: snack.ingredients,
-        purchased_at: new Date().toISOString()
+        total_price: price || 0,
+        ingredients: Array.isArray(ingredients) ? ingredients : [],
+        purchased_at: new Date().toISOString(),
       })
 
     if (inventoryError) throw inventoryError

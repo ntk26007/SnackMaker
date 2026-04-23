@@ -1,8 +1,40 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Footer from '../home/components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
+
+// Hook para animar un número desde 0 hasta el valor objetivo
+function useCountUp(target: number, duration: number = 1200, decimals: number = 0) {
+  const [current, setCurrent] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (target === 0) { setCurrent(0); return; }
+    startTimeRef.current = null;
+
+    const animate = (timestamp: number) => {
+      if (!startTimeRef.current) startTimeRef.current = timestamp;
+      const elapsed = timestamp - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutExpo para que desacelere al final
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const value = eased * target;
+      setCurrent(decimals > 0 ? Math.round(value * 100) / 100 : Math.floor(value));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      } else {
+        setCurrent(target);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target, duration, decimals]);
+
+  return current;
+}
 
 const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_URL,
@@ -34,6 +66,14 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement | null>(null);
+
+  // Contadores animados
+  const countPurchases = useCountUp(statsVisible ? (stats?.total_purchases ?? 0) : 0, 1100);
+  const countSpent = useCountUp(statsVisible ? (stats?.total_spent ?? 0) : 0, 1300, 2);
+  const countCustom = useCountUp(statsVisible ? (stats?.custom_snacks ?? 0) : 0, 900);
+  const countPredefined = useCountUp(statsVisible ? (stats?.predefined_snacks ?? 0) : 0, 1000);
 
   // Función para procesar los ingredientes
   const getIngredientsDisplay = (ingredients: any): Array<{name: string, quantity: number}> => {
@@ -164,6 +204,19 @@ export default function InventoryPage() {
     });
   };
 
+  // IntersectionObserver para disparar la animación cuando las cards entran en vista
+  useEffect(() => {
+    if (!stats) return;
+    const node = statsRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStatsVisible(true); observer.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [stats]);
+
   const getFavoriteIngredients = () => {
     if (!stats?.favorite_ingredients) return [];
     return Object.entries(stats.favorite_ingredients)
@@ -276,42 +329,62 @@ export default function InventoryPage() {
             <>
               {/* Stats Section */}
               {stats && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl p-6 text-white">
+                <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <div
+                    className={`bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl p-6 text-white transition-all duration-700 ${
+                      statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                    }`}
+                    style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '0ms' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-yellow-100 text-sm font-medium">Total Compras</p>
-                        <p className="text-3xl font-bold">{stats.total_purchases}</p>
+                        <p className="text-3xl font-bold tabular-nums">{countPurchases}</p>
                       </div>
                       <i className="ri-shopping-bag-3-line text-3xl text-yellow-200"></i>
                     </div>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-pink-400 to-pink-500 rounded-2xl p-6 text-white">
+
+                  <div
+                    className={`bg-gradient-to-br from-pink-400 to-pink-500 rounded-2xl p-6 text-white transition-all duration-700 ${
+                      statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                    }`}
+                    style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '120ms' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-pink-100 text-sm font-medium">Total Gastado</p>
-                        <p className="text-3xl font-bold">${stats.total_spent.toFixed(2)}</p>
+                        <p className="text-3xl font-bold tabular-nums">${countSpent.toFixed(2)}</p>
                       </div>
                       <i className="ri-money-dollar-circle-line text-3xl text-pink-200"></i>
                     </div>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl p-6 text-white">
+
+                  <div
+                    className={`bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl p-6 text-white transition-all duration-700 ${
+                      statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                    }`}
+                    style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '240ms' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-blue-100 text-sm font-medium">Snacks Personalizados</p>
-                        <p className="text-3xl font-bold">{stats.custom_snacks}</p>
+                        <p className="text-3xl font-bold tabular-nums">{countCustom}</p>
                       </div>
                       <i className="ri-magic-line text-3xl text-blue-200"></i>
                     </div>
                   </div>
-                  
-                  <div className="bg-gradient-to-br from-purple-400 to-purple-500 rounded-2xl p-6 text-white">
+
+                  <div
+                    className={`bg-gradient-to-br from-purple-400 to-purple-500 rounded-2xl p-6 text-white transition-all duration-700 ${
+                      statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                    }`}
+                    style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '360ms' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-purple-100 text-sm font-medium">Del Ranking</p>
-                        <p className="text-3xl font-bold">{stats.predefined_snacks}</p>
+                        <p className="text-3xl font-bold tabular-nums">{countPredefined}</p>
                       </div>
                       <i className="ri-trophy-line text-3xl text-purple-200"></i>
                     </div>
