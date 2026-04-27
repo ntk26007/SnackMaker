@@ -19,6 +19,9 @@ export const navigatePromise = new Promise<NavigateFunction>((resolve) => {
 export function AppRoutes() {
   const element = useRoutes(routes);
   const navigate = useNavigate();
+
+   console.log('AppRoutes rendering, element:', element) 
+   console.log('Current location:', window.location.href) 
   
   useEffect(() => {
     if (!window.REACT_APP_NAVIGATE) {

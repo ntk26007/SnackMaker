@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Footer from '../home/components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
+import { Link } from 'react-router-dom';
 
 // Hook para animar un número desde 0 hasta el valor objetivo
 function useCountUp(target: number, duration: number = 1200, decimals: number = 0) {
@@ -243,12 +244,12 @@ export default function InventoryPage() {
               </h1>
             </div>
             <div className="flex items-center space-x-6">
-              <a href="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
+              <Link to="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
                 Crear
-              </a>
-              <a href="/inventory" className="text-pink-600 font-semibold cursor-pointer">
+              </Link>
+              <Link to="/inventory" className="text-pink-600 font-semibold cursor-pointer">
                 Inventario y compras
-              </a>
+              </Link>
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600 text-sm">
@@ -426,13 +427,10 @@ export default function InventoryPage() {
                     <i className="ri-shopping-cart-line text-6xl text-gray-300 mb-4"></i>
                     <p className="text-xl text-gray-500 mb-2">No tienes compras registradas</p>
                     <p className="text-gray-400">¡Crea tu primer snack personalizado!</p>
-                    <a 
-                      href="/"
-                      className="inline-block mt-6 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap"
-                    >
+                    <Link to="/" className="inline-block mt-6 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap">
                       <i className="ri-magic-line mr-2"></i>
                       Crear Mi Primer Snack
-                    </a>
+                    </Link>
                   </div>
                 ) : (
                   <div className="space-y-6">

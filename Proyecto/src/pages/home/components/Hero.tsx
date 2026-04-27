@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Hero() {
   const [visible, setVisible] = useState(false);
@@ -102,13 +103,10 @@ export default function Hero() {
                 <i className="ri-magic-line mr-2"></i>
                 Empezar a Crear
               </button>
-              <a
-                href="/ranking"
-                className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 transition-all border border-white/30 cursor-pointer whitespace-nowrap"
-              >
+              <Link to="/ranking" className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white/30 transition-all border border-white/30 cursor-pointer whitespace-nowrap">
                 <i className="ri-trophy-line mr-2"></i>
                 Ver Ranking
-              </a>
+              </Link>
             </div>
           )}
 

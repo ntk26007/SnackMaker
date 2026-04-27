@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Footer from '../home/components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
+import { Link } from 'react-router-dom';
 
 const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_URL,
@@ -249,8 +250,7 @@ export default function RankingPage() {
               </h1>
             </div>
             <div className="flex items-center space-x-6">
-              <a href="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">Crear</a>
-              <a href="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">Inventario y compras</a>
+              <Link to="/inventory" className="flex-1 bg-gradient-to-r ..."> Ver Inventario</Link>
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600 text-sm">

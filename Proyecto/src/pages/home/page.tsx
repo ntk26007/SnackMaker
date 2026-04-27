@@ -6,6 +6,7 @@ import SnackCreator from './components/SnackCreator';
 import PopularSnacks from './components/PopularSnacks';
 import Footer from './components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
+import { Link } from 'react-router-dom';
 
 const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_URL,
@@ -66,12 +67,12 @@ export default function HomePage() {
               </h1>
             </div>
             <div className="flex items-center space-x-6">
-              <a href="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
+              <Link to="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
                 Crear
-              </a>
-              <a href="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
+              </Link>
+              <Link to="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
                 Inventario y compras
-              </a>
+              </Link>
               
               {loading ? (
                 <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
