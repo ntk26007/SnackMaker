@@ -32,8 +32,10 @@ Para garantizar la persistencia de los datos y la seguridad en las transacciones
 
 ## ⋆⭒˚.⋆ 𝘌𝘴𝘵𝘳𝘶𝘤𝘵𝘶𝘳𝘢 𝘥𝘦𝘭 𝘙𝘦𝘱𝘰𝘴𝘪𝘵𝘰𝘳𝘪𝘰 ⋆⭒˚.⋆
 * `/src`: Código fuente de la aplicación.
-* `/assets`: Recursos visuales y logotipos.
-* `/docs`: Documentación adicional sobre la API e ingredientes.
+* `/img`: Recursos visuales y logotipos.
+* `/readme`: Documentación adicional sobre la API e ingredientes.
+* `/supabase/functions`: Base de datos de la aplicación
+La tienda también cuenta con su propio instalador tanto para aplicación de escritorio como la aplicación en móviles.
 
 ---
 ☕︎ Desarrollado como solución integral para la personalización de snacks saludables.
