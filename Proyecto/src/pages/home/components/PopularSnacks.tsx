@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { useCart } from '@/context/CartContext';
 
 interface PopularSnack {
   id: string;
@@ -128,13 +129,10 @@ const scrollStyles = `
 `;
 
 export default function PopularSnacks() {
+  const { addItem } = useCart();
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'price'>('rating');
-  const [selectedSnack, setSelectedSnack] = useState<PopularSnack | null>(null);
-  const [showPurchase, setShowPurchase] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [successVisible, setSuccessVisible] = useState(false);
+  const [toastSnack, setToastSnack] = useState<PopularSnack | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
 
   const { ref: headerRef, isVisible: headerVisible } = useScrollReveal({ threshold: 0.2 });
   const { ref: filtersRef, isVisible: filtersVisible } = useScrollReveal({ threshold: 0.3 });
@@ -159,52 +157,18 @@ export default function PopularSnacks() {
     }
   };
 
-  const handlePurchaseSnack = (snack: PopularSnack) => {
-    setSelectedSnack(snack);
-    setShowPurchase(true);
-  };
-
-  const processPurchase = async () => {
-    if (!userEmail.trim()) { alert('¡Ingresa tu email para completar la compra!'); return; }
-    if (!selectedSnack) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_PUBLIC_SUPABASE_URL}/functions/v1/purchase-predefined-snack`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          snackName: selectedSnack.name,
-          snackCreator: selectedSnack.creator,
-          userEmail,
-          price: selectedSnack.price,
-          ingredients: selectedSnack.ingredients
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setShowPurchase(false);
-        setPurchaseSuccess(true);
-        setTimeout(() => setSuccessVisible(true), 30);
-      } else {
-        alert('Error al procesar la compra: ' + (data.error || 'Error desconocido'));
-      }
-    } catch (error) {
-      console.error('Error processing purchase:', error);
-      alert('Error al procesar la compra');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setShowPurchase(false);
-    setPurchaseSuccess(false);
-    setSuccessVisible(false);
-    setSelectedSnack(null);
-    setUserEmail('');
+  const handleAddToCart = (snack: PopularSnack) => {
+    addItem({
+      id: `popular-${snack.id}`,
+      name: snack.name,
+      price: snack.price,
+      image: snack.image,
+      type: 'ranking',
+      ingredients: snack.ingredients,
+    });
+    setToastSnack(snack);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 3000);
   };
 
   return (
@@ -313,10 +277,10 @@ export default function PopularSnacks() {
                   <div className="text-xl font-bold text-pink-600">${snack.price.toFixed(2)}</div>
                 </div>
                 <button
-                  onClick={() => handlePurchaseSnack(snack)}
+                  onClick={() => handleAddToCart(snack)}
                   className="w-full bg-gradient-to-r from-pink-500 to-pink-600 text-white py-2 rounded-lg font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <i className="ri-shopping-cart-line mr-2"></i>Comprar Snack
+                  <i className="ri-shopping-cart-line mr-2"></i>Añadir al carrito
                 </button>
               </div>
             </div>
@@ -370,178 +334,30 @@ export default function PopularSnacks() {
         </div>
       </div>
 
-      {/* Purchase Modal */}
-      {showPurchase && selectedSnack && !purchaseSuccess && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Comprar Snack</h3>
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600 mb-2">Snack: {selectedSnack.name}</p>
-                <p className="text-sm text-gray-600 mb-2">Creador: {selectedSnack.creator}</p>
-                <p className="text-2xl font-bold text-pink-600">${selectedSnack.price.toFixed(2)}</p>
-              </div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowPurchase(false)}
-                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={processPurchase}
-                  disabled={loading}
-                  className="flex-1 bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50"
-                >
-                  {loading ? 'Procesando...' : 'Confirmar Compra'}
-                </button>
-              </div>
-            </div>
+      {/* Toast — añadido al carrito */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 ${
+          toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center gap-3 bg-white border border-green-200 shadow-xl rounded-2xl px-5 py-3 min-w-[280px] max-w-sm">
+          <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <i className="ri-shopping-cart-2-line text-green-600 text-lg"></i>
           </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {purchaseSuccess && selectedSnack && (
-        <div
-          className={`fixed inset-0 flex items-center justify-center z-50 p-4 transition-all duration-500 ${
-            successVisible ? 'bg-black/60' : 'bg-black/0'
-          }`}
-        >
-          <style>{`
-            @keyframes ps-successPop {
-              0%   { opacity: 0; transform: scale(0.7) translateY(40px); }
-              60%  { transform: scale(1.04) translateY(-6px); }
-              80%  { transform: scale(0.98) translateY(2px); }
-              100% { opacity: 1; transform: scale(1) translateY(0); }
-            }
-            @keyframes ps-checkDraw {
-              from { stroke-dashoffset: 60; }
-              to   { stroke-dashoffset: 0; }
-            }
-            @keyframes ps-ringPulse {
-              0%   { transform: scale(0.6); opacity: 0.9; }
-              100% { transform: scale(2.2); opacity: 0; }
-            }
-            @keyframes ps-confettiFall {
-              0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-              100% { transform: translateY(180px) rotate(720deg); opacity: 0; }
-            }
-            @keyframes ps-starPop {
-              0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
-              60%  { transform: scale(1.3) rotate(10deg); opacity: 1; }
-              100% { transform: scale(1) rotate(0deg); opacity: 1; }
-            }
-            @keyframes ps-slideUp {
-              from { opacity: 0; transform: translateY(20px); }
-              to   { opacity: 1; transform: translateY(0); }
-            }
-            .ps-success-card   { animation: ps-successPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-            .ps-check-path     { stroke-dasharray: 60; stroke-dashoffset: 60; animation: ps-checkDraw 0.5s ease forwards; animation-delay: 0.35s; }
-            .ps-ring-pulse     { animation: ps-ringPulse 0.7s ease-out forwards; animation-delay: 0.3s; }
-            .ps-confetti-1     { animation: ps-confettiFall 1.1s ease-in forwards; animation-delay: 0.4s; }
-            .ps-confetti-2     { animation: ps-confettiFall 1.3s ease-in forwards; animation-delay: 0.5s; }
-            .ps-confetti-3     { animation: ps-confettiFall 0.95s ease-in forwards; animation-delay: 0.55s; }
-            .ps-confetti-4     { animation: ps-confettiFall 1.2s ease-in forwards; animation-delay: 0.45s; }
-            .ps-confetti-5     { animation: ps-confettiFall 1.0s ease-in forwards; animation-delay: 0.6s; }
-            .ps-confetti-6     { animation: ps-confettiFall 1.4s ease-in forwards; animation-delay: 0.35s; }
-            .ps-star-1         { animation: ps-starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.55s; opacity: 0; }
-            .ps-star-2         { animation: ps-starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.7s;  opacity: 0; }
-            .ps-star-3         { animation: ps-starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.85s; opacity: 0; }
-            .ps-slide-up-1     { animation: ps-slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.45s; opacity: 0; }
-            .ps-slide-up-2     { animation: ps-slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.58s; opacity: 0; }
-            .ps-slide-up-3     { animation: ps-slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.72s; opacity: 0; }
-            .ps-slide-up-4     { animation: ps-slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.86s; opacity: 0; }
-          `}</style>
-
-          <div className="ps-success-card bg-white rounded-3xl p-8 max-w-md w-full relative overflow-hidden">
-            {/* Confetti */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="ps-confetti-1 absolute top-0 left-[15%] w-3 h-3 bg-yellow-400 rounded-sm"></div>
-              <div className="ps-confetti-2 absolute top-0 left-[30%] w-2 h-4 bg-pink-400 rounded-sm"></div>
-              <div className="ps-confetti-3 absolute top-0 left-[50%] w-3 h-2 bg-green-400 rounded-sm"></div>
-              <div className="ps-confetti-4 absolute top-0 left-[65%] w-2 h-3 bg-yellow-300 rounded-sm"></div>
-              <div className="ps-confetti-5 absolute top-0 left-[80%] w-3 h-3 bg-pink-300 rounded-full"></div>
-              <div className="ps-confetti-6 absolute top-0 left-[45%] w-2 h-2 bg-amber-400 rounded-full"></div>
-            </div>
-
-            <div className="text-center relative z-10">
-              {/* Check animado */}
-              <div className="relative w-24 h-24 mx-auto mb-5">
-                <div className="ps-ring-pulse absolute inset-0 rounded-full border-4 border-green-400 opacity-0"></div>
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-                    <path className="ps-check-path" d="M10 22 L19 31 L34 14" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Estrellas */}
-              <div className="flex justify-center gap-1 mb-3">
-                <span className="ps-star-1 text-yellow-400 text-xl">&#9733;</span>
-                <span className="ps-star-2 text-yellow-400 text-2xl">&#9733;</span>
-                <span className="ps-star-3 text-yellow-400 text-xl">&#9733;</span>
-              </div>
-
-              <h3 className="ps-slide-up-1 text-3xl font-bold text-gray-800 mb-1" style={{ fontFamily: '"Pacifico", serif' }}>
-                ¡Compra Exitosa!
-              </h3>
-
-              {/* Snack pill */}
-              <div className="ps-slide-up-2 inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-full px-4 py-1.5 mt-2 mb-4">
-                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-                  <img src={selectedSnack.image} alt={selectedSnack.name} className="w-full h-full object-cover object-top" />
-                </div>
-                <span className="text-yellow-800 font-semibold text-sm">{selectedSnack.name}</span>
-              </div>
-
-              <p className="ps-slide-up-3 text-gray-500 text-sm mb-5">
-                Tu snack ha sido añadido a tu inventario
-              </p>
-
-              {/* Precio + email */}
-              <div className="ps-slide-up-3 bg-gradient-to-r from-pink-50 to-yellow-50 rounded-2xl p-4 mb-6 border border-pink-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <i className="ri-user-line"></i>
-                    <span className="truncate max-w-[160px]">{userEmail}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Total pagado</p>
-                    <p className="text-2xl font-bold text-pink-600">${selectedSnack.price.toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botones */}
-              <div className="ps-slide-up-4 flex space-x-3">
-                <button
-                  onClick={resetForm}
-                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  Seguir viendo
-                </button>
-                <a
-                  href="/inventory"
-                  className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white py-3 rounded-xl font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap text-center"
-                >
-                  <i className="ri-archive-line mr-1"></i>Ver Inventario
-                </a>
-              </div>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate">
+              {toastSnack?.name} añadido al carrito
+            </p>
+            <p className="text-xs text-gray-500">Ve a Crear para finalizar tu pedido</p>
           </div>
+          <a
+            href="/#snack-creator"
+            className="flex-shrink-0 bg-pink-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-pink-600 transition-colors whitespace-nowrap"
+          >
+            Ver carrito
+          </a>
         </div>
-      )}
+      </div>
     </div>
   );
 }

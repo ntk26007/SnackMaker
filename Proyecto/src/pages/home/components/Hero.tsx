@@ -67,21 +67,21 @@ export default function Hero() {
       `}</style>
 
       {/* Mascota esquina superior izquierda */}
-      {visible && (
-        <div className="hero-mascot absolute top-10 left-10 md:top-14 md:left-14 w-44 h-44 md:w-60 md:h-60 lg:w-72 lg:h-72 z-10 pointer-events-none">
+      {/*{visible && (
+        <div className="hero-mascot absolute top-20 left-2 md:top-14 md:left-14 w-20 h-20 md:w-60 md:h-60 lg:w-72 lg:h-72 z-10 pointer-events-none">
           <img
             src="https://storage.readdy-site.link/project_files/62d206f0-feda-4a4d-a808-b79c7e6567c9/bed002c0-d399-406d-b70e-a3769f7726f6_Gemini_Generated_Image_563x9q563x9q563x-removebg-preview.png?v=058d2d9c118ae1e1d8288f4f08522ac3"
             alt="SnackMaker mascot"
             className="w-full h-full object-contain drop-shadow-2xl"
           />
         </div>
-      )}
+      )}*/}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20 pb-8">
         <div className="w-full">
 
           {visible && (
-            <h1 className="hero-title text-5xl md:text-7xl font-bold text-white mb-6">
+            <h1 className="hero-title text-4xl md:text-7xl font-bold text-white mb-6 mt-8 md:mt-0">
               Crea tu Snack
               <span className="block text-yellow-400">Perfecto</span>
             </h1>

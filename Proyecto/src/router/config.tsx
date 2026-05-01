@@ -12,6 +12,10 @@ const routes = [
     element: <HomePage />,
   },
   {
+    path: '/crear',
+    element: <HomePage />,
+  },
+  {
     path: '/inventory',
     element: <InventoryPage />,
   },

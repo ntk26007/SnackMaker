@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Footer from '../home/components/Footer';
@@ -19,7 +18,6 @@ function useCountUp(target: number, duration: number = 1200, decimals: number = 
       if (!startTimeRef.current) startTimeRef.current = timestamp;
       const elapsed = timestamp - startTimeRef.current;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutExpo para que desacelere al final
       const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       const value = eased * target;
       setCurrent(decimals > 0 ? Math.round(value * 100) / 100 : Math.floor(value));
@@ -68,6 +66,7 @@ export default function InventoryPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [statsVisible, setStatsVisible] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const statsRef = useRef<HTMLDivElement | null>(null);
 
   // Contadores animados
@@ -79,41 +78,28 @@ export default function InventoryPage() {
   // Función para procesar los ingredientes
   const getIngredientsDisplay = (ingredients: any): Array<{name: string, quantity: number}> => {
     if (!ingredients) return [];
-    
+
     try {
-      // Si ingredients es un array
       if (Array.isArray(ingredients)) {
         return ingredients.map(ingredient => {
-          // Si el ingrediente es un string JSON
           if (typeof ingredient === 'string') {
             try {
               const parsed = JSON.parse(ingredient);
-              return {
-                name: parsed.name || 'Ingrediente',
-                quantity: parsed.quantity || 1
-              };
+              return { name: parsed.name || 'Ingrediente', quantity: parsed.quantity || 1 };
             } catch {
               return { name: ingredient, quantity: 1 };
             }
           }
-          // Si el ingrediente ya es un objeto
-          return {
-            name: ingredient.name || 'Ingrediente',
-            quantity: ingredient.quantity || 1
-          };
+          return { name: ingredient.name || 'Ingrediente', quantity: ingredient.quantity || 1 };
         });
       }
-      
-      // Si ingredients es un string JSON
+
       if (typeof ingredients === 'string') {
         const parsed = JSON.parse(ingredients);
-        if (Array.isArray(parsed)) {
-          return getIngredientsDisplay(parsed);
-        }
+        if (Array.isArray(parsed)) return getIngredientsDisplay(parsed);
         return [{ name: parsed.name || 'Ingrediente', quantity: parsed.quantity || 1 }];
       }
-      
-      // Si ingredients es un objeto simple
+
       return [{ name: ingredients.name || 'Ingrediente', quantity: ingredients.quantity || 1 }];
     } catch (error) {
       console.error('Error parsing ingredients:', error);
@@ -122,18 +108,14 @@ export default function InventoryPage() {
   };
 
   useEffect(() => {
-    // Check if user is logged in
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      if (user) {
-        fetchInventory(user.email!);
-      }
+      if (user) fetchInventory(user.email!);
     };
 
     checkUser();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
       if (session?.user) {
@@ -162,19 +144,19 @@ export default function InventoryPage() {
       if (response.ok) {
         const data = await response.json();
         setPurchases(data.inventory || []);
-        
-        // Mapear los datos de estadísticas que vienen de la Edge Function
+
         if (data.stats) {
           const mappedStats: Stats = {
             total_purchases: data.stats.totalPurchases || 0,
             total_spent: data.stats.totalSpent || 0,
             custom_snacks: data.stats.customCount || 0,
             predefined_snacks: data.stats.predefinedCount || 0,
-            favorite_ingredients: data.stats.favoriteIngredients ? 
-              data.stats.favoriteIngredients.reduce((acc: Record<string, number>, item: any) => {
-                acc[item.name] = item.count;
-                return acc;
-              }, {}) : {}
+            favorite_ingredients: data.stats.favoriteIngredients
+              ? data.stats.favoriteIngredients.reduce((acc: Record<string, number>, item: any) => {
+                  acc[item.name] = item.count;
+                  return acc;
+                }, {})
+              : {},
           };
           setStats(mappedStats);
         }
@@ -195,17 +177,6 @@ export default function InventoryPage() {
     await supabase.auth.signOut();
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // IntersectionObserver para disparar la animación cuando las cards entran en vista
   useEffect(() => {
     if (!stats) return;
     const node = statsRef.current;
@@ -221,29 +192,34 @@ export default function InventoryPage() {
   const getFavoriteIngredients = () => {
     if (!stats?.favorite_ingredients) return [];
     return Object.entries(stats.favorite_ingredients)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50">
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
                 <img
                   src="https://storage.readdy-site.link/project_files/62d206f0-feda-4a4d-a808-b79c7e6567c9/2d3f1ad2-3f9f-4832-8cbd-7d6bf3ffa4f7_Captura_de_pantalla_2026-04-15_154827-removebg-preview.png?v=5d39c16b6d3eb4cf95e6c5ae3eeb12d6"
                   alt="SnackMaker logo"
                   className="w-full h-full object-contain"
                 />
               </div>
-              <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: '"Pacifico", serif' }}>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800" style={{ fontFamily: '"Pacifico", serif' }}>
                 SnackMaker
               </h1>
-            </div>
-            <div className="flex items-center space-x-6">
+            </Link>
+
+            {/* Links escritorio */}
+            <div className="hidden md:flex items-center space-x-6">
               <Link to="/" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
                 Crear
               </Link>
@@ -280,12 +256,76 @@ export default function InventoryPage() {
                 </>
               )}
             </div>
+
+            {/* Botón hamburguesa móvil */}
+            <button
+              className="md:hidden p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Abrir menú"
+            >
+              <i className={`text-xl ${mobileMenuOpen ? 'ri-close-line' : 'ri-menu-line'}`}></i>
+            </button>
           </div>
         </div>
+
+        {/* Menú móvil desplegable */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
+            <div className="px-4 py-2 space-y-1">
+              <Link
+                to="/"
+                className="block px-3 py-3 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <i className="ri-magic-line mr-2"></i>Crear
+              </Link>
+              <Link
+                to="/inventory"
+                className="block px-3 py-3 text-pink-600 font-semibold bg-pink-50 rounded-xl"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <i className="ri-shopping-bag-3-line mr-2"></i>Inventario y compras
+              </Link>
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-100">
+              {user ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 px-3 truncate">
+                    <i className="ri-user-line mr-1"></i>{user.email}
+                  </p>
+                  <button
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-3 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <i className="ri-logout-box-line mr-2"></i>Cerrar Sesión
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3 pb-1">
+                  <button
+                    onClick={() => { handleAuthClick('login'); setMobileMenuOpen(false); }}
+                    className="flex-1 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-full font-medium hover:bg-gray-50 transition-all cursor-pointer"
+                  >
+                    Iniciar Sesión
+                  </button>
+                  <button
+                    onClick={() => { handleAuthClick('signup'); setMobileMenuOpen(false); }}
+                    className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-4 py-2.5 rounded-full font-medium hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer"
+                  >
+                    Registrarse
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
-      <div className="pt-28 pb-12">
+      {/* Contenido principal — pt reducido en móvil */}
+      <div className="pt-20 sm:pt-28 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
@@ -298,7 +338,6 @@ export default function InventoryPage() {
           </div>
 
           {!user ? (
-            // Not logged in - show login prompt
             <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
               <div className="max-w-md mx-auto">
                 <i className="ri-lock-line text-6xl text-gray-300 mb-6"></i>
@@ -308,7 +347,7 @@ export default function InventoryPage() {
                 <p className="text-gray-600 mb-8">
                   Necesitas una cuenta para guardar y ver tus snacks comprados
                 </p>
-                <div className="flex gap-4 justify-center">
+                <div className="flex gap-4 justify-center flex-wrap">
                   <button
                     onClick={() => handleAuthClick('login')}
                     className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap"
@@ -330,7 +369,7 @@ export default function InventoryPage() {
             <>
               {/* Stats Section */}
               {stats && (
-                <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
                   <div
                     className={`bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl p-6 text-white transition-all duration-700 ${
                       statsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
@@ -369,7 +408,7 @@ export default function InventoryPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100 text-sm font-medium">Snacks Personalizados</p>
+                        <p className="text-blue-100 text-sm font-medium">Personalizados</p>
                         <p className="text-3xl font-bold tabular-nums">{countCustom}</p>
                       </div>
                       <i className="ri-magic-line text-3xl text-blue-200"></i>
@@ -412,11 +451,11 @@ export default function InventoryPage() {
               )}
 
               {/* Purchases List */}
-              <div className="bg-white rounded-3xl shadow-xl p-8">
+              <div className="bg-white rounded-3xl shadow-xl p-4 sm:p-8">
                 <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
                   Historial de Compras
                 </h3>
-                
+
                 {loading ? (
                   <div className="text-center py-12">
                     <i className="ri-loader-4-line text-4xl text-gray-400 animate-spin mb-4"></i>
@@ -427,7 +466,10 @@ export default function InventoryPage() {
                     <i className="ri-shopping-cart-line text-6xl text-gray-300 mb-4"></i>
                     <p className="text-xl text-gray-500 mb-2">No tienes compras registradas</p>
                     <p className="text-gray-400">¡Crea tu primer snack personalizado!</p>
-                    <Link to="/" className="inline-block mt-6 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap">
+                    <Link
+                      to="/"
+                      className="inline-block mt-6 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap"
+                    >
                       <i className="ri-magic-line mr-2"></i>
                       Crear Mi Primer Snack
                     </Link>
@@ -435,25 +477,24 @@ export default function InventoryPage() {
                 ) : (
                   <div className="space-y-6">
                     {purchases.map((purchase, index) => (
-                      <div key={`purchase-${purchase.id || index}`} className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-shadow">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                      <div key={`purchase-${purchase.id || index}`} className="border border-gray-200 rounded-2xl p-4 sm:p-6 hover:shadow-lg transition-shadow">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               <h3 className="text-lg font-bold text-gray-800">{purchase.snack_name}</h3>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                purchase.snack_type === 'custom' 
-                                  ? 'bg-pink-100 text-pink-700' 
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                purchase.snack_type === 'custom'
+                                  ? 'bg-pink-100 text-pink-700'
                                   : 'bg-blue-100 text-blue-700'
                               }`}>
                                 {purchase.snack_type === 'custom' ? 'Personalizado' : 'Del Ranking'}
                               </span>
                             </div>
-                            
+
                             {purchase.description && (
                               <p className="text-gray-600 text-sm mb-3">{purchase.description}</p>
                             )}
 
-                            {/* Ingredients */}
                             <div className="flex flex-wrap gap-1 mb-3">
                               {getIngredientsDisplay(purchase.ingredients).map((ingredient, idx) => (
                                 <span
@@ -470,7 +511,7 @@ export default function InventoryPage() {
                             </p>
                           </div>
 
-                          <div className="text-right ml-4">
+                          <div className="text-right shrink-0">
                             <p className="text-2xl font-bold text-pink-600">
                               ${(purchase.total_price || 0).toFixed(2)}
                             </p>
@@ -489,7 +530,6 @@ export default function InventoryPage() {
 
       <Footer />
 
-      {/* Auth Modal */}
       {showAuthModal && (
         <AuthModal
           mode={authMode}

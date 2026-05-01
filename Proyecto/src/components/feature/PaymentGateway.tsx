@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -328,8 +329,8 @@ export default function PaymentGateway({
               />
               <InputField
                 id="cardCvv" label="CVV" value={cardCvv}
-                onChange={(v) => setCardCvv(v.replace(/\D/g, '').slice(0, 4))}
-                placeholder="•••" maxLength={4} errors={errors}
+                onChange={(v) => setCardCvv(v.replace(/\D/g, '').slice(0, 3))}
+                placeholder="•••" maxLength={3} errors={errors}
               />
             </div>
           </>
@@ -472,13 +473,10 @@ export default function PaymentGateway({
           <i className="ri-add-line mr-1" />
           Crear otro snack
         </button>
-        <a
-          href="/inventory"
-          className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors text-center whitespace-nowrap"
-        >
+        <Link to="/inventory" className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors text-center whitespace-nowrap">
           <i className="ri-archive-line mr-1" />
           Ver inventario
-        </a>
+        </Link>
       </div>
     </div>
   );

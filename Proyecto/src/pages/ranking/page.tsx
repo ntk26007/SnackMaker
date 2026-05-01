@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Footer from '../home/components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
 import { Link } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
 
 const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_URL,
@@ -20,7 +21,6 @@ interface PopularSnack {
   creator?: string;
 }
 
-// Pool of varied snack images matching the home page style
 const SNACK_IMAGE_POOL = [
   'https://readdy.ai/api/search-image?query=Tropical%20mix%20of%20dried%20mango%2C%20coconut%20flakes%2C%20cashews%20and%20white%20chocolate%20pieces%20in%20a%20bowl%2C%20food%20photography%2C%20pastel%20background%2C%20natural%20lighting%2C%20appetizing%20presentation&width=400&height=400&seq=rank-img-1&orientation=squarish',
   'https://readdy.ai/api/search-image?query=Energy%20mix%20of%20almonds%2C%20walnuts%2C%20dried%20blueberries%20and%20cacao%20nibs%20in%20a%20bowl%2C%20healthy%20snack%20photography%2C%20pastel%20background%2C%20natural%20lighting%2C%20nutritious%20presentation&width=400&height=400&seq=rank-img-2&orientation=squarish',
@@ -34,19 +34,16 @@ const SNACK_IMAGE_POOL = [
 
 const getSnackImage = (snack: PopularSnack) => {
   if (snack.image_url && snack.image_url.startsWith('http')) return snack.image_url;
-  // Assign a consistent image from the pool based on snack id
   const idx = (typeof snack.id === 'number' ? snack.id : parseInt(String(snack.id), 10) || 0) % SNACK_IMAGE_POOL.length;
   return SNACK_IMAGE_POOL[idx];
 };
 
-// Safe numeric ID extractor — handles undefined, strings, etc.
 const getNumericId = (snack: PopularSnack): number => {
   if (typeof snack.id === 'number' && !isNaN(snack.id)) return snack.id;
   if (typeof snack.id === 'string') {
     const parsed = parseInt(snack.id, 10);
     if (!isNaN(parsed)) return parsed;
   }
-  // Fallback: hash the name into a number
   let hash = 0;
   for (let i = 0; i < snack.name.length; i++) {
     hash = ((hash << 5) - hash) + snack.name.charCodeAt(i);
@@ -55,14 +52,12 @@ const getNumericId = (snack: PopularSnack): number => {
   return Math.abs(hash) || 1;
 };
 
-// Deterministic pseudo-random generator
 const seededRandom = (seed: number) => {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   const result = x - Math.floor(x);
   return isNaN(result) ? 0.5 : result;
 };
 
-// Price: $3.99 to $15.99, deterministic per snack
 const getSnackPrice = (snack: PopularSnack) => {
   const rawPrice = Number(snack.price);
   if (!isNaN(rawPrice) && rawPrice > 0) return rawPrice;
@@ -72,15 +67,13 @@ const getSnackPrice = (snack: PopularSnack) => {
   return Math.round(price * 100) / 100;
 };
 
-// Purchases: deterministic base + ranking bonus so top ranks have higher counts
 const getSnackPurchases = (snack: PopularSnack, rankIndex: number = 0) => {
   const rawCount = Number(snack.purchase_count);
   if (!isNaN(rawCount) && rawCount > 1) return rawCount;
   const id = getNumericId(snack);
   const rand = seededRandom(id + 1000);
-  // Base 15-300, plus ranking bonus: higher rank = more purchases
   const base = 15 + Math.floor(rand * 285);
-  const rankBonus = Math.max(0, 500 - rankIndex * 45); // #1 gets +500, #2 +455, etc.
+  const rankBonus = Math.max(0, 500 - rankIndex * 45);
   return base + rankBonus;
 };
 
@@ -90,12 +83,12 @@ export default function RankingPage() {
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [purchaseLoading, setPurchaseLoading] = useState<number | null>(null);
-  const [showPurchaseModal, setShowPurchaseModal] = useState<PopularSnack | null>(null);
-  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
-  const [successSnack, setSuccessSnack] = useState<PopularSnack | null>(null);
-  const [successVisible, setSuccessVisible] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
+  // Toast feedback
+  const [toastSnack, setToastSnack] = useState<PopularSnack | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const { addItem, count: cartCount } = useCart();
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimateIn(true), 50);
@@ -104,17 +97,14 @@ export default function RankingPage() {
 
   useEffect(() => {
     loadPopularSnacks();
-
     const checkUser = async () => {
       const { data: { user: u } } = await supabase.auth.getUser();
       setUser(u);
     };
     checkUser();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -145,47 +135,20 @@ export default function RankingPage() {
     await supabase.auth.signOut();
   };
 
-  const handlePurchaseClick = (snack: PopularSnack) => {
-    if (!user) {
-      alert('¡Debes iniciar sesión para comprar snacks!');
-      return;
-    }
-    setShowPurchaseModal(snack);
-  };
-
-  const processPurchase = async (snack: PopularSnack) => {
-    setPurchaseLoading(snack.id);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_PUBLIC_SUPABASE_URL}/functions/v1/purchase-predefined-snack`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          snackName: snack.name,
-          snackCreator: snack.creator || 'SnackMaker',
-          userEmail: user.email,
-          price: getSnackPrice(snack),
-          ingredients: snack.ingredients,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSuccessSnack(snack);
-        setShowPurchaseModal(null);
-        setPurchaseSuccess(true);
-        setTimeout(() => setSuccessVisible(true), 30);
-        loadPopularSnacks();
-      } else {
-        alert('Error al procesar la compra: ' + (data.error || 'Error desconocido'));
-      }
-    } catch (error) {
-      console.error('Error processing purchase:', error);
-      alert('Error al procesar la compra');
-    } finally {
-      setPurchaseLoading(null);
-    }
+  /** Añade el snack al carrito y muestra un toast */
+  const handleAddToCart = (snack: PopularSnack) => {
+    const ingredientNames = snack.ingredients.map(getIngredientName);
+    addItem({
+      id: `ranking-${snack.id}`,
+      name: snack.name,
+      price: getSnackPrice(snack),
+      image: getSnackImage(snack),
+      type: 'ranking',
+      ingredients: ingredientNames,
+    });
+    setToastSnack(snack);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 3000);
   };
 
   const getRankBg = (index: number) => {
@@ -223,7 +186,6 @@ export default function RankingPage() {
     );
   }
 
-  // Podium order: 2nd, 1st, 3rd
   const podiumOrder = [popularSnacks[1], popularSnacks[0], popularSnacks[2]].filter(Boolean);
   const podiumMeta = [
     { emoji: '🥈', label: '2º', height: 'h-44', cardPad: 'p-5', imgSize: 'w-20 h-20', textSize: 'text-base', bg: 'bg-gradient-to-b from-gray-300 to-gray-400' },
@@ -233,11 +195,39 @@ export default function RankingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50">
+
+      {/* ── Toast añadido al carrito ── */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 ${
+          toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center gap-3 bg-white border border-green-200 shadow-xl rounded-2xl px-5 py-3 min-w-[280px] max-w-sm">
+          <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <i className="ri-shopping-cart-2-line text-green-600 text-lg"></i>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate">
+              {toastSnack?.name} añadido
+            </p>
+            <p className="text-xs text-gray-500">
+              {cartCount} {cartCount === 1 ? 'artículo' : 'artículos'} en el carrito
+            </p>
+          </div>
+          <Link
+            to="/#snack-creator"
+            className="flex-shrink-0 bg-pink-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-pink-600 transition-colors whitespace-nowrap"
+          >
+            Ver carrito
+          </Link>
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
                 <img
                   src="https://storage.readdy-site.link/project_files/62d206f0-feda-4a4d-a808-b79c7e6567c9/2d3f1ad2-3f9f-4832-8cbd-7d6bf3ffa4f7_Captura_de_pantalla_2026-04-15_154827-removebg-preview.png?v=5d39c16b6d3eb4cf95e6c5ae3eeb12d6"
@@ -248,9 +238,23 @@ export default function RankingPage() {
               <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: '"Pacifico", serif' }}>
                 SnackMaker
               </h1>
-            </div>
+            </Link>
             <div className="flex items-center space-x-6">
-              <Link to="/inventory" className="flex-1 bg-gradient-to-r ..."> Ver Inventario</Link>
+              {/* Carrito con badge */}
+              <Link
+                to="/crear"
+                className="relative flex items-center gap-2 text-gray-600 hover:text-pink-600 transition-colors cursor-pointer"
+              >
+                <i className="ri-shopping-cart-2-line text-xl"></i>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+              <Link to="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors text-sm">
+                Inventario
+              </Link>
               {user ? (
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-600 text-sm">
@@ -329,6 +333,31 @@ export default function RankingPage() {
       <div className="pb-16 bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
 
+          {/* ── Banner CTA: combinar con snack propio ── */}
+          <div
+            className={`mb-10 bg-gradient-to-r from-pink-500 to-pink-600 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            style={{ transitionDelay: '200ms' }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <i className="ri-magic-line text-white text-2xl"></i>
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg leading-tight">¿Quieres combinar?</p>
+                <p className="text-pink-100 text-sm">
+                  Añade snacks del ranking al carrito y crea también tu propio mix. ¡Págalo todo junto!
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/crear"
+              className="flex-shrink-0 bg-white text-pink-600 font-bold px-5 py-2.5 rounded-full hover:bg-pink-50 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <i className="ri-add-circle-line"></i>
+              Crear mi snack
+            </Link>
+          </div>
+
           {popularSnacks.length === 0 ? (
             <div className="text-center py-16">
               <i className="ri-emotion-sad-line text-6xl text-gray-300 mb-4"></i>
@@ -348,7 +377,6 @@ export default function RankingPage() {
                     Mejores clasificados
                   </h2>
 
-                  {/* Podium cards — 2nd | 1st | 3rd */}
                   <div className="flex justify-center items-end gap-4 max-w-3xl mx-auto">
                     {podiumOrder.map((snack, podiumIdx) => {
                       const meta = podiumMeta[podiumIdx];
@@ -359,9 +387,7 @@ export default function RankingPage() {
                           className={`flex flex-col items-center flex-1 max-w-[220px] transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
                           style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${podiumDelay}ms` }}
                         >
-                          {/* Card */}
                           <div className={`w-full ${meta.bg} rounded-2xl ${meta.cardPad} flex flex-col items-center text-center transition-transform hover:scale-105`}>
-                            {/* AI-generated snack image */}
                             <div className={`${meta.imgSize} rounded-full overflow-hidden border-4 border-white/40 mb-3 flex-shrink-0`}>
                               <img
                                 src={getSnackImage(snack)}
@@ -369,7 +395,6 @@ export default function RankingPage() {
                                 className="w-full h-full object-cover object-top"
                               />
                             </div>
-                            {/* Name — full, no truncation */}
                             <h3 className={`font-bold text-white ${meta.textSize} leading-tight mb-1 break-words w-full`}>
                               {snack.name}
                             </h3>
@@ -377,15 +402,15 @@ export default function RankingPage() {
                             <div className="bg-white/20 rounded-full px-3 py-1 mb-3">
                               <span className="text-white font-semibold text-sm">{getSnackPurchases(snack, podiumIdx === 1 ? 0 : podiumIdx === 0 ? 1 : 2)} compras</span>
                             </div>
+                            {/* Botón: Añadir al carrito */}
                             <button
-                              onClick={() => handlePurchaseClick(snack)}
-                              disabled={purchaseLoading === snack.id}
-                              className="bg-white text-gray-700 px-4 py-2 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 w-full"
+                              onClick={() => handleAddToCart(snack)}
+                              className="bg-white text-gray-700 px-4 py-2 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors cursor-pointer whitespace-nowrap w-full flex items-center justify-center gap-1.5"
                             >
+                              <i className="ri-shopping-cart-2-line"></i>
                               ${getSnackPrice(snack).toFixed(2)}
                             </button>
                           </div>
-                          {/* Emoji medal below card */}
                           <div
                             className={`${podiumIdx === 1 ? 'text-6xl' : 'text-5xl'} mt-2 transition-all duration-500 ${animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
                             style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${900 + podiumIdx * 100}ms` }}
@@ -420,7 +445,7 @@ export default function RankingPage() {
                         <span className="text-white font-bold text-sm">#{index + 1}</span>
                       </div>
 
-                      {/* Imagen pequeña del snack */}
+                      {/* Imagen */}
                       <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border-2 border-gray-200">
                         <img
                           src={getSnackImage(snack)}
@@ -455,23 +480,35 @@ export default function RankingPage() {
                         <p className="text-xl font-bold text-pink-600">{getSnackPurchases(snack, index)}</p>
                       </div>
 
-                      {/* Botón comprar */}
+                      {/* Botón: Añadir al carrito */}
                       <button
-                        onClick={() => handlePurchaseClick(snack)}
-                        disabled={purchaseLoading === snack.id}
-                        className="flex-shrink-0 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+                        onClick={() => handleAddToCart(snack)}
+                        className="flex-shrink-0 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
                       >
-                        {purchaseLoading === snack.id ? (
-                          <i className="ri-loader-4-line animate-spin"></i>
-                        ) : (
-                          <>
-                            <i className="ri-shopping-cart-line mr-1"></i>
-                            ${getSnackPrice(snack).toFixed(2)}
-                          </>
-                        )}
+                        <i className="ri-shopping-cart-2-line"></i>
+                        ${getSnackPrice(snack).toFixed(2)}
                       </button>
                     </div>
                   ))}
+                </div>
+
+                {/* ── CTA inferior ── */}
+                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                  <p className="text-gray-500 text-sm mb-3">
+                    ¿Ya tienes snacks en el carrito? Ve a crear tu mezcla personalizada y págalo todo junto.
+                  </p>
+                  <Link
+                    to="/crear"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-6 py-3 rounded-full font-semibold hover:from-pink-600 hover:to-pink-700 transition-all"
+                  >
+                    <i className="ri-magic-line"></i>
+                    Ir a crear mi snack
+                    {cartCount > 0 && (
+                      <span className="bg-white text-pink-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
                 </div>
               </div>
             </>
@@ -488,193 +525,6 @@ export default function RankingPage() {
           onClose={() => setShowAuthModal(false)}
           onSwitchMode={(mode) => setAuthMode(mode)}
         />
-      )}
-
-      {/* Purchase Modal */}
-      {showPurchaseModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Confirmar Compra</h3>
-              <div className="w-24 h-24 mx-auto rounded-full overflow-hidden mb-4 border-4 border-yellow-200">
-                <img
-                  src={getSnackImage(showPurchaseModal)}
-                  alt={showPurchaseModal.name}
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-              <h4 className="text-xl font-semibold text-gray-800 mb-2 break-words">{showPurchaseModal.name}</h4>
-              <p className="text-gray-600 mb-4">{showPurchaseModal.description}</p>
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-sm text-gray-600 mb-2">Precio:</p>
-                <p className="text-3xl font-bold text-pink-600">${getSnackPrice(showPurchaseModal).toFixed(2)}</p>
-                <p className="text-sm text-gray-600 mt-2">
-                  <i className="ri-user-line mr-1"></i>{user?.email}
-                </p>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowPurchaseModal(null)}
-                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => processPurchase(showPurchaseModal)}
-                  disabled={purchaseLoading === showPurchaseModal.id}
-                  className="flex-1 bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50"
-                >
-                  {purchaseLoading === showPurchaseModal.id ? 'Procesando...' : 'Confirmar Compra'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {purchaseSuccess && successSnack && (
-        <div
-          className={`fixed inset-0 flex items-center justify-center z-50 p-4 transition-all duration-500 ${
-            successVisible ? 'bg-black/60' : 'bg-black/0'
-          }`}
-        >
-          <style>{`
-            @keyframes successPop {
-              0%   { opacity: 0; transform: scale(0.7) translateY(40px); }
-              60%  { transform: scale(1.04) translateY(-6px); }
-              80%  { transform: scale(0.98) translateY(2px); }
-              100% { opacity: 1; transform: scale(1) translateY(0); }
-            }
-            @keyframes checkDraw {
-              from { stroke-dashoffset: 60; }
-              to   { stroke-dashoffset: 0; }
-            }
-            @keyframes ringPulse {
-              0%   { transform: scale(0.6); opacity: 0.9; }
-              100% { transform: scale(2.2); opacity: 0; }
-            }
-            @keyframes confettiFall {
-              0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-              100% { transform: translateY(180px) rotate(720deg); opacity: 0; }
-            }
-            @keyframes starPop {
-              0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
-              60%  { transform: scale(1.3) rotate(10deg); opacity: 1; }
-              100% { transform: scale(1) rotate(0deg); opacity: 1; }
-            }
-            @keyframes slideUp {
-              from { opacity: 0; transform: translateY(20px); }
-              to   { opacity: 1; transform: translateY(0); }
-            }
-            .success-card  { animation: successPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-            .check-path    { stroke-dasharray: 60; stroke-dashoffset: 60; animation: checkDraw 0.5s ease forwards; animation-delay: 0.35s; }
-            .ring-pulse    { animation: ringPulse 0.7s ease-out forwards; animation-delay: 0.3s; }
-            .confetti-1    { animation: confettiFall 1.1s ease-in forwards; animation-delay: 0.4s; }
-            .confetti-2    { animation: confettiFall 1.3s ease-in forwards; animation-delay: 0.5s; }
-            .confetti-3    { animation: confettiFall 0.95s ease-in forwards; animation-delay: 0.55s; }
-            .confetti-4    { animation: confettiFall 1.2s ease-in forwards; animation-delay: 0.45s; }
-            .confetti-5    { animation: confettiFall 1.0s ease-in forwards; animation-delay: 0.6s; }
-            .confetti-6    { animation: confettiFall 1.4s ease-in forwards; animation-delay: 0.35s; }
-            .star-1        { animation: starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.55s; opacity: 0; }
-            .star-2        { animation: starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.7s;  opacity: 0; }
-            .star-3        { animation: starPop 0.4s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.85s; opacity: 0; }
-            .slide-up-1    { animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.45s; opacity: 0; }
-            .slide-up-2    { animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.58s; opacity: 0; }
-            .slide-up-3    { animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.72s; opacity: 0; }
-            .slide-up-4    { animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; animation-delay: 0.86s; opacity: 0; }
-          `}</style>
-
-          <div className="success-card bg-white rounded-3xl p-8 max-w-md w-full relative overflow-hidden">
-
-            {/* Confetti particles */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="confetti-1 absolute top-0 left-[15%] w-3 h-3 bg-yellow-400 rounded-sm"></div>
-              <div className="confetti-2 absolute top-0 left-[30%] w-2 h-4 bg-pink-400 rounded-sm"></div>
-              <div className="confetti-3 absolute top-0 left-[50%] w-3 h-2 bg-green-400 rounded-sm"></div>
-              <div className="confetti-4 absolute top-0 left-[65%] w-2 h-3 bg-yellow-300 rounded-sm"></div>
-              <div className="confetti-5 absolute top-0 left-[80%] w-3 h-3 bg-pink-300 rounded-full"></div>
-              <div className="confetti-6 absolute top-0 left-[45%] w-2 h-2 bg-amber-400 rounded-full"></div>
-            </div>
-
-            <div className="text-center relative z-10">
-
-              {/* Animated check circle */}
-              <div className="relative w-24 h-24 mx-auto mb-5">
-                {/* Pulse ring */}
-                <div className="ring-pulse absolute inset-0 rounded-full border-4 border-green-400 opacity-0"></div>
-                {/* Green circle bg */}
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
-                  <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-                    <path
-                      className="check-path"
-                      d="M10 22 L19 31 L34 14"
-                      stroke="white"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Stars */}
-              <div className="flex justify-center gap-1 mb-3">
-                <span className="star-1 text-yellow-400 text-xl">&#9733;</span>
-                <span className="star-2 text-yellow-400 text-2xl">&#9733;</span>
-                <span className="star-3 text-yellow-400 text-xl">&#9733;</span>
-              </div>
-
-              {/* Title */}
-              <h3 className="slide-up-1 text-3xl font-bold text-gray-800 mb-1" style={{ fontFamily: '"Pacifico", serif' }}>
-                ¡Compra Exitosa!
-              </h3>
-
-              {/* Snack name pill */}
-              <div className="slide-up-2 inline-flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-full px-4 py-1.5 mt-2 mb-4">
-                <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-                  <img src={getSnackImage(successSnack)} alt={successSnack.name} className="w-full h-full object-cover object-top" />
-                </div>
-                <span className="text-yellow-800 font-semibold text-sm">{successSnack.name}</span>
-              </div>
-
-              {/* Description */}
-              <p className="slide-up-3 text-gray-500 text-sm mb-5">
-                Tu snack ha sido añadido a tu inventario
-              </p>
-
-              {/* Price badge */}
-              <div className="slide-up-3 bg-gradient-to-r from-pink-50 to-yellow-50 rounded-2xl p-4 mb-6 border border-pink-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <i className="ri-user-line"></i>
-                    <span className="truncate max-w-[160px]">{user?.email}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Total pagado</p>
-                    <p className="text-2xl font-bold text-pink-600">${getSnackPrice(successSnack).toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div className="slide-up-4 flex space-x-3">
-                <button
-                  onClick={() => { setPurchaseSuccess(false); setSuccessVisible(false); setSuccessSnack(null); }}
-                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer whitespace-nowrap"
-                >
-                  Seguir viendo
-                </button>
-                <a
-                  href="/inventory"
-                  className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white py-3 rounded-xl font-semibold hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap text-center"
-                >
-                  <i className="ri-archive-line mr-1"></i>Ver Inventario
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

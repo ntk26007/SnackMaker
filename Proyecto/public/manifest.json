@@ -1,0 +1,22 @@
+{
+  "name": "SnackMaker",
+  "short_name": "SnackMaker",
+  "description": "Crea snacks personalizados únicos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#EC4899",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/img/snackmaker.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/snackmaker.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
