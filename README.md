@@ -39,4 +39,4 @@ La tienda también cuenta con su propio instalador tanto para aplicación de esc
 
 ---
 ☕︎ Desarrollado como solución integral para la personalización de snacks saludables.
-Link trello = https://trello.com/b/obnV7hXO/proyecto
+* Link trello = https://trello.com/b/obnV7hXO/proyecto
