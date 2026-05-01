@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import AuthModal from '../../components/feature/AuthModal';
 import { Link } from 'react-router-dom';
 import Cart from '@/components/feature/Cart';
+import InstallBanner from '../../components/feature/InstallBanner';
 
 const supabase = createClient(
   import.meta.env.VITE_PUBLIC_SUPABASE_URL,
@@ -158,6 +159,7 @@ export default function HomePage() {
           onSwitchMode={(mode) => setAuthMode(mode)}
         />
       )}
+      <InstallBanner /> 
     </div>
   );
 }
