@@ -87,6 +87,7 @@ export default function RankingPage() {
   // Toast feedback
   const [toastSnack, setToastSnack] = useState<PopularSnack | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { addItem, count: cartCount } = useCart();
 
@@ -226,20 +227,24 @@ export default function RankingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+
+            {/* Logo */}
             <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
                 <img
                   src="https://storage.readdy-site.link/project_files/62d206f0-feda-4a4d-a808-b79c7e6567c9/2d3f1ad2-3f9f-4832-8cbd-7d6bf3ffa4f7_Captura_de_pantalla_2026-04-15_154827-removebg-preview.png?v=5d39c16b6d3eb4cf95e6c5ae3eeb12d6"
                   alt="SnackMaker logo"
                   className="w-full h-full object-contain"
                 />
               </div>
-              <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: '"Pacifico", serif' }}>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800" style={{ fontFamily: '"Pacifico", serif' }}>
                 SnackMaker
               </h1>
             </Link>
-            <div className="flex items-center space-x-6">
+
+            {/* Links escritorio */}
+            <div className="hidden md:flex items-center space-x-6">
               {/* Carrito con badge */}
               <Link
                 to="/crear"
@@ -252,8 +257,11 @@ export default function RankingPage() {
                   </span>
                 )}
               </Link>
-              <Link to="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors text-sm">
+              <Link to="/inventory" className="text-gray-600 hover:text-pink-600 transition-colors cursor-pointer">
                 Inventario
+              </Link>
+              <Link to="/ranking" className="text-pink-600 font-semibold cursor-pointer">
+                Ranking
               </Link>
               {user ? (
                 <div className="flex items-center space-x-4">
@@ -275,8 +283,77 @@ export default function RankingPage() {
                 </>
               )}
             </div>
+
+            {/* Botón hamburguesa móvil */}
+            <button
+              className="md:hidden p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Abrir menú"
+            >
+              <i className={`text-xl ${mobileMenuOpen ? 'ri-close-line' : 'ri-menu-line'}`}></i>
+            </button>
           </div>
         </div>
+
+        {/* Menú móvil desplegable */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-100 shadow-lg">
+            <div className="px-4 py-2 space-y-1">
+              <Link
+                to="/"
+                className="block px-3 py-3 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <i className="ri-magic-line mr-2"></i>Crear
+              </Link>
+              <Link
+                to="/inventory"
+                className="block px-3 py-3 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <i className="ri-shopping-bag-3-line mr-2"></i>Inventario
+              </Link>
+              <Link
+                to="/ranking"
+                className="block px-3 py-3 text-pink-600 font-semibold bg-pink-50 rounded-xl"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <i className="ri-trophy-line mr-2"></i>Ranking
+              </Link>
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-100">
+              {user ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 px-3 truncate">
+                    <i className="ri-user-line mr-1"></i>{user.email}
+                  </p>
+                  <button
+                    onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-3 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <i className="ri-logout-box-line mr-2"></i>Cerrar Sesión
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3 pb-1">
+                  <button
+                    onClick={() => { handleAuthClick('login'); setMobileMenuOpen(false); }}
+                    className="flex-1 border border-gray-200 text-gray-700 px-4 py-2.5 rounded-full font-medium hover:bg-gray-50 transition-all cursor-pointer"
+                  >
+                    Iniciar Sesión
+                  </button>
+                  <button
+                    onClick={() => { handleAuthClick('signup'); setMobileMenuOpen(false); }}
+                    className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-4 py-2.5 rounded-full font-medium hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer"
+                  >
+                    Registrarse
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Header */}
@@ -370,49 +447,59 @@ export default function RankingPage() {
               {popularSnacks.length >= 1 && (
                 <div className="mb-16">
                   <h2
-                    className={`text-3xl font-bold text-center text-gray-800 mb-10 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+                    className={`text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-8 sm:mb-10 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
                     style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '480ms' }}
                   >
                     <i className="ri-trophy-line text-yellow-500 mr-2"></i>
                     Mejores clasificados
                   </h2>
 
-                  <div className="flex justify-center items-end gap-4 max-w-3xl mx-auto">
+                  <div className="flex justify-center items-end gap-2 sm:gap-4 w-full">
                     {podiumOrder.map((snack, podiumIdx) => {
                       const meta = podiumMeta[podiumIdx];
                       const podiumDelay = 600 + podiumIdx * 140;
+                      const isFirst = podiumIdx === 1; // el 1º está en el centro
                       return (
                         <div
                           key={snack.id}
-                          className={`flex flex-col items-center flex-1 max-w-[220px] transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                          className={`flex flex-col items-center flex-1 min-w-0 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
                           style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${podiumDelay}ms` }}
                         >
-                          <div className={`w-full ${meta.bg} rounded-2xl ${meta.cardPad} flex flex-col items-center text-center transition-transform hover:scale-105`}>
-                            <div className={`${meta.imgSize} rounded-full overflow-hidden border-4 border-white/40 mb-3 flex-shrink-0`}>
+                          <div className={`w-full ${meta.bg} rounded-2xl flex flex-col items-center text-center transition-transform hover:scale-105 ${isFirst ? 'p-3 sm:p-7' : 'p-2 sm:p-5'}`}>
+                            {/* Imagen */}
+                            <div className={`rounded-full overflow-hidden border-4 border-white/40 mb-2 flex-shrink-0 ${isFirst ? 'w-16 h-16 sm:w-28 sm:h-28' : 'w-12 h-12 sm:w-20 sm:h-20'}`}>
                               <img
                                 src={getSnackImage(snack)}
                                 alt={snack.name}
                                 className="w-full h-full object-cover object-top"
                               />
                             </div>
-                            <h3 className={`font-bold text-white ${meta.textSize} leading-tight mb-1 break-words w-full`}>
+                            {/* Nombre */}
+                            <h3 className={`font-bold text-white leading-tight mb-1 w-full truncate ${isFirst ? 'text-xs sm:text-lg' : 'text-xs sm:text-base'}`}>
                               {snack.name}
                             </h3>
-                            <p className="text-white/80 text-xs mb-3 leading-snug line-clamp-2">{snack.description}</p>
-                            <div className="bg-white/20 rounded-full px-3 py-1 mb-3">
-                              <span className="text-white font-semibold text-sm">{getSnackPurchases(snack, podiumIdx === 1 ? 0 : podiumIdx === 0 ? 1 : 2)} compras</span>
+                            {/* Descripción — solo desktop */}
+                            <p className="hidden sm:block text-white/80 text-xs mb-3 leading-snug line-clamp-2">{snack.description}</p>
+                            {/* Compras */}
+                            <div className="bg-white/20 rounded-full px-2 py-0.5 mb-2 sm:mb-3">
+                              <span className={`text-white font-semibold ${isFirst ? 'text-xs sm:text-sm' : 'text-xs'}`}>
+                                {getSnackPurchases(snack, podiumIdx === 1 ? 0 : podiumIdx === 0 ? 1 : 2)}
+                                <span className="hidden sm:inline"> compras</span>
+                              </span>
                             </div>
-                            {/* Botón: Añadir al carrito */}
+                            {/* Botón carrito */}
                             <button
                               onClick={() => handleAddToCart(snack)}
-                              className="bg-white text-gray-700 px-4 py-2 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors cursor-pointer whitespace-nowrap w-full flex items-center justify-center gap-1.5"
+                              className={`bg-white text-gray-700 rounded-full font-semibold hover:bg-gray-100 transition-colors cursor-pointer w-full flex items-center justify-center gap-1 ${isFirst ? 'px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm' : 'px-1.5 py-1 text-xs'}`}
                             >
                               <i className="ri-shopping-cart-2-line"></i>
-                              ${getSnackPrice(snack).toFixed(2)}
+                              <span className="hidden sm:inline">${getSnackPrice(snack).toFixed(2)}</span>
+                              <span className="sm:hidden">${Math.round(getSnackPrice(snack))}</span>
                             </button>
                           </div>
+                          {/* Emoji medalla */}
                           <div
-                            className={`${podiumIdx === 1 ? 'text-6xl' : 'text-5xl'} mt-2 transition-all duration-500 ${animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                            className={`mt-1 transition-all duration-500 ${isFirst ? 'text-4xl sm:text-6xl' : 'text-3xl sm:text-5xl'} ${animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
                             style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${900 + podiumIdx * 100}ms` }}
                           >
                             {meta.emoji}
@@ -426,7 +513,7 @@ export default function RankingPage() {
 
               {/* ── RANKING COMPLETO ── */}
               <div
-                className={`bg-white rounded-3xl p-8 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                className={`bg-white rounded-3xl p-4 sm:p-8 transition-all duration-700 ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                 style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: '720ms' }}
               >
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
@@ -437,16 +524,16 @@ export default function RankingPage() {
                   {popularSnacks.map((snack, index) => (
                     <div
                       key={snack.id}
-                      className={`flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-yellow-50/60 transition-all duration-500 ${animateIn ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}`}
+                      className={`flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-2xl hover:bg-yellow-50/60 transition-all duration-500 ${animateIn ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}`}
                       style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)', transitionDelay: `${840 + index * 60}ms` }}
                     >
                       {/* Puesto */}
-                      <div className={`w-11 h-11 flex-shrink-0 ${getRankBg(index)} rounded-full flex items-center justify-center`}>
-                        <span className="text-white font-bold text-sm">#{index + 1}</span>
+                      <div className={`w-9 h-9 sm:w-11 sm:h-11 flex-shrink-0 ${getRankBg(index)} rounded-full flex items-center justify-center`}>
+                        <span className="text-white font-bold text-xs sm:text-sm">#{index + 1}</span>
                       </div>
 
                       {/* Imagen */}
-                      <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden border-2 border-gray-200">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl overflow-hidden border-2 border-gray-200">
                         <img
                           src={getSnackImage(snack)}
                           alt={snack.name}
@@ -456,37 +543,38 @@ export default function RankingPage() {
 
                       {/* Nombre + descripción + ingredientes */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-800 text-base leading-tight mb-0.5 break-words">
+                        <h3 className="font-bold text-gray-800 text-sm sm:text-base leading-tight mb-0.5 truncate">
                           {snack.name}
                         </h3>
-                        <p className="text-gray-500 text-xs mb-1.5 line-clamp-1">{snack.description}</p>
+                        <p className="text-gray-500 text-xs mb-1.5 line-clamp-1 hidden sm:block">{snack.description}</p>
                         <div className="flex flex-wrap gap-1">
-                          {snack.ingredients.slice(0, 3).map((ingredient, idx) => (
+                          {snack.ingredients.slice(0, 2).map((ingredient, idx) => (
                             <span key={idx} className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs">
                               {getIngredientName(ingredient)}
                             </span>
                           ))}
-                          {snack.ingredients.length > 3 && (
+                          {snack.ingredients.length > 2 && (
                             <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-xs">
-                              +{snack.ingredients.length - 3} más
+                              +{snack.ingredients.length - 2} más
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Compras */}
-                      <div className="text-center flex-shrink-0 w-16">
-                        <p className="text-xs text-gray-400 mb-0.5">Compras</p>
-                        <p className="text-xl font-bold text-pink-600">{getSnackPurchases(snack, index)}</p>
+                      <div className="text-center flex-shrink-0 w-12 sm:w-16">
+                        <p className="text-xs text-gray-400 mb-0.5 hidden sm:block">Compras</p>
+                        <p className="text-base sm:text-xl font-bold text-pink-600">{getSnackPurchases(snack, index)}</p>
                       </div>
 
                       {/* Botón: Añadir al carrito */}
                       <button
                         onClick={() => handleAddToCart(snack)}
-                        className="flex-shrink-0 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                        className="flex-shrink-0 bg-gradient-to-r from-pink-500 to-pink-600 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-semibold text-xs sm:text-sm hover:from-pink-600 hover:to-pink-700 transition-all cursor-pointer flex items-center gap-1 sm:gap-1.5 whitespace-nowrap"
                       >
                         <i className="ri-shopping-cart-2-line"></i>
-                        ${getSnackPrice(snack).toFixed(2)}
+                        <span className="hidden sm:inline">${getSnackPrice(snack).toFixed(2)}</span>
+                        <span className="sm:hidden">${getSnackPrice(snack).toFixed(0)}</span>
                       </button>
                     </div>
                   ))}
