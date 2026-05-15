@@ -34,4 +34,4 @@ npm run dist:win
 
 Accede directamente desde el navegador sin ninguna instalación:
 
-🔗 [https://snackmacker.netlify.app/](https://snackmaker.netlify.app/)
+🔗 [https://snackmaker.netlify.app/](https://snakmaker.netlify.app/)
